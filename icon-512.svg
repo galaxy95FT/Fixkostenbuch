@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="115" fill="#d4a853"/>
+  <text x="256" y="230" text-anchor="middle" font-family="Georgia, serif" font-size="190" font-weight="400" fill="#0f0e0c" letter-spacing="-4">FIX</text>
+  <line x1="60" y1="285" x2="452" y2="285" stroke="#0f0e0c" stroke-width="1.5" opacity="0.25"/>
+  <text x="256" y="360" text-anchor="middle" font-family="Georgia, serif" font-size="52" font-weight="400" fill="#0f0e0c" letter-spacing="18" opacity="0.55">KOSTEN</text>
+</svg>
