@@ -411,6 +411,10 @@ let customCats = JSON.parse(localStorage.getItem('fk_cats') || '[]');
 const saveCats = () => localStorage.setItem('fk_cats', JSON.stringify(customCats));
 
 function allCats(){ return [...DEFAULT_CATS, ...customCats]; }
+function catLabel(id){
+  const c=allCats().find(x=>x.id===id);
+  return c ? `${c.emoji} ${c.name}` : id;
+}
 
 function refreshCatSelects(currentVal=''){
   ['inC','eC'].forEach(id=>{
@@ -853,7 +857,7 @@ function renderCosts(){
   let h='';
   Object.entries(g).forEach(([cat,items])=>{
     const gt=items.filter(x=>!x.variable).reduce((s,x)=>s+toMo(effectiveAmount(x,mk),x.interval),0);
-    h+=`<div class="slbl">${cat}${gt>0?' — '+fmt(gt)+'/Mo':''}</div>`;
+    h+=`<div class="slbl">${catLabel(cat)}${gt>0?' — '+fmt(gt)+'/Mo':''}</div>`;
     items.forEach(x=>{
       const ac=accts.find(a=>a.id===x.accountId);
       const ea=x.variable?null:effectiveAmount(x,mk);
