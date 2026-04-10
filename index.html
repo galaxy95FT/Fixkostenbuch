@@ -1076,7 +1076,7 @@ function exportCSV(){
   costs.forEach(c=>{
     const ac=accts.find(a=>a.id===c.accountId);
     const ea=c.variable?'variabel':effectiveAmount(c,mk).toFixed(2);
-    csv+=`"${c.name}","${c.category}","${ea}","${currency}","${IL[c.interval]}","${c.variable?'Ja':'Nein'}","${c.dueDay||''}","${c.startMonth||''}","${ac?ac.name:''}"\n`;
+    csv+=`"${c.name}","${catLabel(c.category)}","${ea}","${currency}","${IL[c.interval]}","${c.variable?'Ja':'Nein'}","${c.dueDay||''}","${c.startMonth||''}","${ac?ac.name:''}"\n`;
   });
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
