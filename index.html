@@ -407,8 +407,13 @@ const DEFAULT_CATS = [
   {id:'Sonstiges', emoji:'📦', name:'Sonstiges',      custom:false},
 ];
 
-let customCats = JSON.parse(localStorage.getItem('fk_cats') || '[]');
-const saveCats = () => localStorage.setItem('fk_cats', JSON.stringify(customCats));
+// User-spezifische localStorage Keys
+let currentUser = null;
+function uid(){ return currentUser?.id || 'local'; }
+function lsKey(k){ return `${k}_${uid()}`; }
+
+let customCats = JSON.parse(localStorage.getItem(lsKey('fk_cats')) || '[]');
+const saveCats = () => localStorage.setItem(lsKey('fk_cats'), JSON.stringify(customCats));
 
 function allCats(){ return [...DEFAULT_CATS, ...customCats]; }
 function catLabel(id){
@@ -470,9 +475,9 @@ const COLORS=['#d4a853','#c0574a','#6a9e6a','#5a8fbf','#9b72b0','#d4856a','#6ab8
 const MO=['Jänner','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 const IL={monthly:'monatlich',quarterly:'quartalsweise',yearly:'jährlich',weekly:'wöchentlich'};
 
-let costs  = JSON.parse(localStorage.getItem('fk_costs') ||'[]');
-let accts  = JSON.parse(localStorage.getItem('fk_accts') ||'[]');
-let varE   = JSON.parse(localStorage.getItem('fk_var')   ||'[]');
+let costs  = JSON.parse(localStorage.getItem(lsKey('fk_costs')) ||'[]');
+let accts  = JSON.parse(localStorage.getItem(lsKey('fk_accts')) ||'[]');
+let varE   = JSON.parse(localStorage.getItem(lsKey('fk_var'))   ||'[]');
 // priceHistory: stored inside each cost as c.priceHistory = [{from:"2025-01", amount:209.37}, ...]
 
 let sc=COLORS[0], ec=COLORS[0], eid=null;
@@ -483,13 +488,13 @@ let firstRender=true;
 // temp price history being edited
 let editPH=[];
 
-const saveC=()=>localStorage.setItem('fk_costs',JSON.stringify(costs));
-const saveA=()=>localStorage.setItem('fk_accts',JSON.stringify(accts));
-const saveV=()=>localStorage.setItem('fk_var',  JSON.stringify(varE));
+const saveC=()=>localStorage.setItem(lsKey('fk_costs'),JSON.stringify(costs));
+const saveA=()=>localStorage.setItem(lsKey('fk_accts'),JSON.stringify(accts));
+const saveV=()=>localStorage.setItem(lsKey('fk_var'),  JSON.stringify(varE));
 // ── SETTINGS STATE ──
-let currency   = localStorage.getItem('fk_currency')   || '€';
-let startMonth = localStorage.getItem('fk_startMonth') || '';
-let darkMode   = localStorage.getItem('fk_dark') !== 'false'; // default dark
+let currency   = localStorage.getItem(lsKey('fk_currency'))   || '€';
+let startMonth = localStorage.getItem(lsKey('fk_startMonth')) || '';
+let darkMode   = localStorage.getItem(lsKey('fk_dark')) !== 'false'; // default dark
 
 const fmt = n => n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+currency;
 const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -921,7 +926,6 @@ const SUPABASE_URL = 'https://dbbzqmjfhsefeanjjacf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_nvF2IgfSeUF1Vh7oApjasQ_5GoIU0Vm';
 
 let sb = null;
-let currentUser = null;
 let loginMode = 'login';
 
 function initSupabase(){
@@ -952,6 +956,7 @@ async function doLogin(){
   currentUser = data.user;
   document.getElementById('loginOverlay').style.display='none';
   showSyncBar();
+  reloadUserData();
   await syncNow();
 }
 
@@ -1046,7 +1051,7 @@ async function loadFromSupabase(){
     if(remoteCosts.length >= costs.length){ costs=remoteCosts; saveC(); }
     if(remoteAccts.length >= accts.length){ accts=remoteAccts; saveA(); }
     if(remoteVarE.length  >= varE.length) { varE=remoteVarE;   saveV(); }
-    renderAccts(); renderMonths(); renderCosts(); updateHdr();
+    reloadUserData();
   } catch(e){}
 }
 
@@ -1058,19 +1063,17 @@ function scheduleSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(syncNow, 
 // ── CURRENCY ──
 function setCurrency(val){
   currency=val;
-  localStorage.setItem('fk_currency',val);
+  localStorage.setItem(lsKey('fk_currency'),val);
   renderMonths(); renderCosts(); updateHdr();
 }
 
-// ── START MONTH ──
 function setStartMonth(val){
   startMonth=val;
-  localStorage.setItem('fk_startMonth',val);
+  localStorage.setItem(lsKey('fk_startMonth'),val);
   firstRender=true;
   renderMonths();
 }
 
-// ── DARK MODE ──
 function applyDarkMode(){
   document.body.classList.toggle('light', !darkMode);
   const thumb=document.getElementById('darkThumb');
@@ -1080,7 +1083,7 @@ function applyDarkMode(){
 }
 function toggleDarkMode(){
   darkMode=!darkMode;
-  localStorage.setItem('fk_dark', darkMode);
+  localStorage.setItem(lsKey('fk_dark'), darkMode);
   applyDarkMode();
 }
 
@@ -1101,9 +1104,32 @@ function exportCSV(){
   URL.revokeObjectURL(url);
 }
 
+function reloadUserData(){
+  // Einmalige Migration: alte Keys (ohne UserID) in neue Keys kopieren
+  const id = uid();
+  if(id !== 'local'){
+    ['fk_costs','fk_accts','fk_var','fk_cats','fk_currency','fk_startMonth','fk_dark'].forEach(k=>{
+      const newKey = `${k}_${id}`;
+      if(!localStorage.getItem(newKey) && localStorage.getItem(k)){
+        localStorage.setItem(newKey, localStorage.getItem(k));
+      }
+    });
+  }
+  costs      = JSON.parse(localStorage.getItem(lsKey('fk_costs')) ||'[]');
+  accts      = JSON.parse(localStorage.getItem(lsKey('fk_accts')) ||'[]');
+  varE       = JSON.parse(localStorage.getItem(lsKey('fk_var'))   ||'[]');
+  customCats = JSON.parse(localStorage.getItem(lsKey('fk_cats'))  ||'[]');
+  currency   = localStorage.getItem(lsKey('fk_currency'))   || '€';
+  startMonth = localStorage.getItem(lsKey('fk_startMonth')) || '';
+  darkMode   = localStorage.getItem(lsKey('fk_dark')) !== 'false';
+  firstRender= true;
+  openSet    = new Set();
+  renderAccts(); refreshCatSelects(); renderMonths(); renderCosts(); updateHdr(); applyDarkMode();
+}
+
 function initSettingsUI(){
-  const sc=document.getElementById('selCurrency');
-  if(sc) sc.value=currency;
+  const currSel=document.getElementById('selCurrency');
+  if(currSel) currSel.value=currency;
   const sm=document.getElementById('selStartMonth');
   if(sm) sm.value=startMonth;
   applyDarkMode();
@@ -1287,6 +1313,7 @@ window.addEventListener('load', function(){
       if(session && session.user){
         currentUser=session.user;
         showSyncBar();
+        reloadUserData();
         loadFromSupabase();
       } else if(!localStorage.getItem('fk_skipped')){
         document.getElementById('loginOverlay').style.display='flex';
