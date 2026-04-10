@@ -975,7 +975,7 @@ function friendlyAuthError(msg){
   if(msg.includes('Invalid login credentials'))   return 'E-Mail oder Passwort falsch.';
   if(msg.includes('Email not confirmed'))          return 'Bitte bestätige zuerst deine E-Mail.';
   if(msg.includes('User already registered'))      return 'Diese E-Mail hat bereits einen Account. Bitte melde dich an.';
-  if(msg.includes('Signups not allowed'))          return 'Registrierung ist derzeit nicht möglich. Bitte wende dich an den Administrator.';
+  if(msg.includes('Signups not allowed') || msg.includes('signup'))  return 'Für diese E-Mail existiert bereits ein Account. Bitte melde dich an oder setze dein Passwort zurück.';
   if(msg.includes('Password should be'))          return 'Das Passwort muss mindestens 6 Zeichen lang sein.';
   if(msg.includes('Unable to validate email'))     return 'Bitte gib eine gültige E-Mail-Adresse ein.';
   return msg;
@@ -1004,7 +1004,19 @@ async function doLogin(){
   const { data, error } = loginMode==='login'
     ? await sb.auth.signInWithPassword({email,password:pw})
     : await sb.auth.signUp({email,password:pw});
-  if(error){ errEl.textContent=friendlyAuthError(error.message); errEl.style.display='block'; document.getElementById('loginBtn').textContent=loginMode==='login'?'Anmelden':'Registrieren'; return; }
+  if(error){
+    const friendly = friendlyAuthError(error.message);
+    errEl.textContent = friendly;
+    errEl.style.display='block';
+    // If existing account error on signup — offer password reset
+    if(loginMode==='signup' && (error.message.includes('Signups not allowed') || error.message.includes('User already registered'))){
+      errEl.innerHTML = friendly + ' <button onclick="forgotPassword()" style="background:none;border:none;color:var(--acc);font-family:\'DM Mono\',monospace;font-size:.75rem;cursor:pointer;text-decoration:underline;padding:0">Passwort zurücksetzen?</button>';
+      // Switch to login tab
+      setTimeout(()=>setLoginTab('login', document.querySelectorAll('.login-tab')[0]), 1500);
+    }
+    document.getElementById('loginBtn').textContent=loginMode==='login'?'Anmelden':'Registrieren';
+    return;
+  }
   if(loginMode==='signup'){ errEl.style.color='var(--acc)'; errEl.textContent='Bestätigungs-E-Mail gesendet! Bitte E-Mail prüfen.'; errEl.style.display='block'; document.getElementById('loginBtn').textContent='Registrieren'; return; }
   currentUser = data.user;
   document.getElementById('loginOverlay').style.display='none';
