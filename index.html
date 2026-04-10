@@ -191,10 +191,21 @@ details{margin:0;padding:0}
     <label>E-Mail</label>
     <input type="email" id="loginEmail" placeholder="name@beispiel.at"/>
     <label>Passwort</label>
-    <input type="password" id="loginPw" placeholder="Passwort"/>
-    <div id="loginErr" style="font-size:.75rem;color:var(--red);margin-bottom:10px;display:none"></div>
-    <button class="btn-p" onclick="doLogin()" id="loginBtn">Anmelden</button>
-    <button class="btn-s" style="width:100%;margin-top:8px" onclick="skipLogin()">Ohne Konto nutzen (nur lokal)</button>
+    <div style="position:relative">
+      <input type="password" id="loginPw" placeholder="Passwort" style="padding-right:42px"/>
+      <button onclick="togglePwVisible()" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--mut);padding:0;line-height:1">
+        <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+    </div>
+    <div id="loginErr" style="font-size:.75rem;color:var(--red);margin:8px 0;display:none"></div>
+    <button class="btn-p" onclick="doLogin()" id="loginBtn" style="margin-top:4px">Anmelden</button>
+    <div style="text-align:center;margin-top:10px">
+      <button onclick="forgotPassword()" type="button" id="forgotBtn" style="background:none;border:none;color:var(--mut);font-family:'DM Mono',monospace;font-size:.75rem;cursor:pointer;text-decoration:underline">Passwort vergessen?</button>
+    </div>
+    <div id="resetOk" style="font-size:.75rem;color:#6a9e6a;text-align:center;margin-top:8px;display:none">✓ Reset-Link wurde an deine E-Mail gesendet!</div>
+    <button class="btn-s" style="width:100%;margin-top:10px" onclick="skipLogin()">Ohne Konto nutzen (nur lokal)</button>
   </div>
 </div>
 
@@ -933,11 +944,53 @@ function initSupabase(){
   try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e){}
 }
 
+function togglePwVisible(){
+  const inp=document.getElementById('loginPw');
+  const icon=document.getElementById('eyeIcon');
+  if(inp.type==='password'){
+    inp.type='text';
+    icon.innerHTML='<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  } else {
+    inp.type='password';
+    icon.innerHTML='<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  }
+}
+
+async function forgotPassword(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const errEl=document.getElementById('loginErr');
+  const okEl=document.getElementById('resetOk');
+  errEl.style.display='none'; okEl.style.display='none';
+  if(!email){ errEl.textContent='Bitte zuerst deine E-Mail eingeben.'; errEl.style.display='block'; return; }
+  if(!sb) return;
+  const {error}=await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://galaxy95ft.github.io/Fixkostenbuch/'
+  });
+  if(error){ errEl.textContent=error.message; errEl.style.display='block'; }
+  else { okEl.style.display='block'; }
+}
+
+function friendlyAuthError(msg){
+  if(!msg) return 'Ein Fehler ist aufgetreten.';
+  if(msg.includes('Invalid login credentials'))   return 'E-Mail oder Passwort falsch.';
+  if(msg.includes('Email not confirmed'))          return 'Bitte bestätige zuerst deine E-Mail.';
+  if(msg.includes('User already registered'))      return 'Diese E-Mail hat bereits einen Account. Bitte melde dich an.';
+  if(msg.includes('Signups not allowed'))          return 'Registrierung ist derzeit nicht möglich. Bitte wende dich an den Administrator.';
+  if(msg.includes('Password should be'))          return 'Das Passwort muss mindestens 6 Zeichen lang sein.';
+  if(msg.includes('Unable to validate email'))     return 'Bitte gib eine gültige E-Mail-Adresse ein.';
+  return msg;
+}
+
 function setLoginTab(mode, el){
   loginMode = mode;
   document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('loginBtn').textContent = mode==='login' ? 'Anmelden' : 'Registrieren';
+  const forgot=document.getElementById('forgotBtn');
+  if(forgot) forgot.style.display = mode==='login' ? '' : 'none';
+  document.getElementById('loginErr').style.display='none';
+  const resetOk=document.getElementById('resetOk');
+  if(resetOk) resetOk.style.display='none';
 }
 
 async function doLogin(){
@@ -951,7 +1004,7 @@ async function doLogin(){
   const { data, error } = loginMode==='login'
     ? await sb.auth.signInWithPassword({email,password:pw})
     : await sb.auth.signUp({email,password:pw});
-  if(error){ errEl.textContent=error.message; errEl.style.display='block'; document.getElementById('loginBtn').textContent=loginMode==='login'?'Anmelden':'Registrieren'; return; }
+  if(error){ errEl.textContent=friendlyAuthError(error.message); errEl.style.display='block'; document.getElementById('loginBtn').textContent=loginMode==='login'?'Anmelden':'Registrieren'; return; }
   if(loginMode==='signup'){ errEl.style.color='var(--acc)'; errEl.textContent='Bestätigungs-E-Mail gesendet! Bitte E-Mail prüfen.'; errEl.style.display='block'; document.getElementById('loginBtn').textContent='Registrieren'; return; }
   currentUser = data.user;
   document.getElementById('loginOverlay').style.display='none';
