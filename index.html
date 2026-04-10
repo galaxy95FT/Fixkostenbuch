@@ -570,7 +570,14 @@ function addCost(){
 }
 
 // DELETE COST
-function delCost(id){costs=costs.filter(c=>c.id!==id);varE=varE.filter(v=>v.costId!==id);saveC();saveV();renderCosts();renderMonths();updateHdr();}
+function delCost(id){
+  const c=costs.find(x=>x.id===id); if(!c) return;
+  showConf(
+    `"${c.name}" löschen?`,
+    `Die Position wird unwiderruflich gelöscht.`,
+    ()=>{ costs=costs.filter(x=>x.id!==id); varE=varE.filter(v=>v.costId!==id); saveC();saveV();renderCosts();renderMonths();updateHdr(); }
+  );
+}
 
 // PRICE HISTORY EDITING
 function renderPHList(){
