@@ -1307,19 +1307,59 @@ if('serviceWorker' in navigator){
 // Supabase init & auth check — wait for page fully loaded
 window.addEventListener('load', function(){
   initSupabase();
-  if(sb){
-    sb.auth.getSession().then(function(res){
-      const session = res.data && res.data.session;
-      if(session && session.user){
-        currentUser=session.user;
-        showSyncBar();
-        reloadUserData();
-        loadFromSupabase();
-      } else if(!localStorage.getItem('fk_skipped')){
-        document.getElementById('loginOverlay').style.display='flex';
-      }
-    }).catch(function(){ });
+  if(!sb) return;
+
+  // Check if this is an invite/reset link (token in URL hash)
+  const hash = window.location.hash;
+  const params = new URLSearchParams(hash.replace('#',''));
+  const accessToken = params.get('access_token');
+  const type = params.get('type');
+
+  if(accessToken && (type === 'invite' || type === 'recovery' || type === 'signup')){
+    // Clear any existing session so invited user gets their own account
+    sb.auth.signOut().then(()=>{
+      // Set the session from the invite token
+      sb.auth.setSession({access_token: accessToken, refresh_token: params.get('refresh_token')||''})
+        .then(res=>{
+          if(res.data?.user){
+            currentUser = res.data.user;
+            // Show password setup for new invite
+            if(type === 'invite'){
+              document.getElementById('loginOverlay').style.display='flex';
+              setLoginTab('login', document.querySelectorAll('.login-tab')[0]);
+              document.querySelector('.login-box p').textContent = 'Willkommen! Bitte lege ein Passwort für deinen Account fest.';
+              document.getElementById('loginEmail').value = currentUser.email;
+              document.getElementById('loginEmail').readOnly = true;
+              document.getElementById('loginBtn').textContent = 'Passwort festlegen';
+              document.getElementById('loginBtn').onclick = async ()=>{
+                const pw = document.getElementById('loginPw').value;
+                if(!pw || pw.length < 6){ const e=document.getElementById('loginErr'); e.textContent='Mindestens 6 Zeichen.'; e.style.display='block'; return; }
+                const {error} = await sb.auth.updateUser({password: pw});
+                if(error){ const e=document.getElementById('loginErr'); e.textContent=error.message; e.style.display='block'; return; }
+                document.getElementById('loginOverlay').style.display='none';
+                showSyncBar();
+                reloadUserData();
+                await syncNow();
+                window.location.hash = '';
+              };
+            }
+          }
+        }).catch(()=>{});
+    });
+    return;
   }
+
+  sb.auth.getSession().then(function(res){
+    const session = res.data && res.data.session;
+    if(session && session.user){
+      currentUser=session.user;
+      showSyncBar();
+      reloadUserData();
+      loadFromSupabase();
+    } else if(!localStorage.getItem('fk_skipped')){
+      document.getElementById('loginOverlay').style.display='flex';
+    }
+  }).catch(function(){ });
 });
 </script>
 </body>
