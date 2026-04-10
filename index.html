@@ -243,7 +243,7 @@ details{margin:0;padding:0}
   <div class="htop">
     <h1>Fixkosten<span>buch</span></h1>
     <div style="display:flex;gap:4px;align-items:center">
-      <button onclick="openAccount()" id="btnAccount" style="display:none;background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:6px;color:var(--acc);transition:color .15s;line-height:1" title="Mein Konto">
+      <button onclick="openAccount()" id="btnAccount" style="background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:6px;color:var(--acc);transition:color .15s;line-height:1" title="Konto">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       </button>
       <button onclick="switchTab('settings')" id="btnSettings" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:4px 6px;border-radius:6px;color:var(--mut);transition:color .15s" title="Einstellungen">⚙️</button>
@@ -969,18 +969,20 @@ async function doLogout(){
   if(sb) await sb.auth.signOut();
   currentUser=null;
   document.getElementById('syncBar').style.display='none';
-  const btn=document.getElementById('btnAccount');
-  if(btn) btn.style.display='none';
+  reloadUserData();
 }
 
 function showSyncBar(){
   document.getElementById('syncBar').style.display='flex';
   setSyncStatus('green', currentUser?.email || 'Verbunden');
-  const btn=document.getElementById('btnAccount');
-  if(btn) btn.style.display='';
 }
 
 function openAccount(){
+  if(!currentUser){
+    // Nicht angemeldet → Login-Fenster zeigen
+    document.getElementById('loginOverlay').style.display='flex';
+    return;
+  }
   document.getElementById('acctEmail').textContent=currentUser?.email||'—';
   document.getElementById('newEmail').value='';
   document.getElementById('newPw1').value='';
