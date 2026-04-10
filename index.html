@@ -1011,8 +1011,6 @@ async function doLogin(){
     // If existing account error on signup — offer password reset
     if(loginMode==='signup' && (error.message.includes('Signups not allowed') || error.message.includes('User already registered'))){
       errEl.innerHTML = friendly + ' <button onclick="forgotPassword()" style="background:none;border:none;color:var(--acc);font-family:\'DM Mono\',monospace;font-size:.75rem;cursor:pointer;text-decoration:underline;padding:0">Passwort zurücksetzen?</button>';
-      // Switch to login tab
-      setTimeout(()=>setLoginTab('login', document.querySelectorAll('.login-tab')[0]), 1500);
     }
     document.getElementById('loginBtn').textContent=loginMode==='login'?'Anmelden':'Registrieren';
     return;
