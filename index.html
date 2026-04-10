@@ -138,9 +138,9 @@ details{margin:0;padding:0}
 .ph-entry{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--sur2);border:1px solid var(--bor);border-radius:6px;margin-bottom:6px;font-size:.82rem}
 .ph-entry .from{color:var(--mut);font-size:.7rem}
 .ph-entry .amt{font-family:'DM Serif Display',serif;font-size:.95rem;color:var(--acc)}
-.ph-add-row{display:flex;gap:8px;margin-top:8px}
+.ph-add-row{display:flex;gap:8px;margin-top:8px;align-items:flex-end}
 .ph-add-row input{flex:1;font-size:.82rem;padding:6px 10px}
-.btn-ph-add{background:var(--sur2);border:1px solid var(--bor);color:var(--acc);font-family:'DM Mono',monospace;font-size:.78rem;padding:6px 12px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.btn-ph-add{background:var(--sur2);border:1px solid var(--bor);color:var(--acc);font-family:'DM Mono',monospace;font-size:.88rem;padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0;width:36px;text-align:center}
 .btn-ph-add:hover{background:var(--bor)}
 .empty{text-align:center;color:var(--mut);font-size:.82rem;padding:36px 20px;border:1px dashed var(--bor);border-radius:var(--rad);margin-top:12px}
 .empty .icon{font-size:1.8rem;margin-bottom:8px}
@@ -242,7 +242,7 @@ details{margin:0;padding:0}
   <div class="htop">
     <h1>Fixkosten<span>buch</span></h1>
     <div style="display:flex;gap:4px;align-items:center">
-      <button onclick="openAccount()" id="btnAccount" style="display:none;background:none;border:none;cursor:pointer;font-size:1.2rem;padding:4px 6px;border-radius:6px;color:var(--mut);transition:color .15s" title="Mein Konto">👤</button>
+      <button onclick="openAccount()" id="btnAccount" style="display:none;background:none;border:none;cursor:pointer;font-size:1.2rem;padding:4px 6px;border-radius:6px;color:var(--acc);transition:color .15s" title="Mein Konto">👤</button>
       <button onclick="switchTab('settings')" id="btnSettings" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:4px 6px;border-radius:6px;color:var(--mut);transition:color .15s" title="Einstellungen">⚙️</button>
     </div>
   </div>
@@ -324,7 +324,7 @@ details{margin:0;padding:0}
       <div class="ph-add-row">
         <div style="flex:1"><label>Ab Monat</label><input type="month" id="phFrom"/></div>
         <div style="flex:1"><label>Betrag (€)</label><input type="number" id="phAmt" step="0.01" min="0" placeholder="0,00"/></div>
-        <div style="align-self:flex-end"><button class="btn-ph-add" onclick="addPriceEntry()">+ Eintragen</button></div>
+        <div style="align-self:flex-end"><button class="btn-ph-add" onclick="addPriceEntry()">+</button></div>
       </div>
     </div>
 
