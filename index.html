@@ -165,6 +165,13 @@ details{margin:0;padding:0}
 .login-tabs{display:flex;gap:0;margin-bottom:20px;border:1px solid var(--bor);border-radius:6px;overflow:hidden}
 .login-tab{flex:1;text-align:center;padding:7px;font-size:.75rem;cursor:pointer;color:var(--mut);background:var(--sur2)}
 .login-tab.active{background:var(--acc);color:#000}
+/* ACCOUNT MODAL */
+.acct-section{margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--bor)}
+.acct-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.acct-section h3{font-family:'DM Serif Display',serif;font-size:1rem;color:var(--txt);margin-bottom:12px}
+.acct-email{font-size:.82rem;color:var(--acc);margin-bottom:12px;word-break:break-all}
+.msg-ok{font-size:.75rem;color:#6a9e6a;margin-bottom:10px;display:none}
+.msg-err{font-size:.75rem;color:var(--red);margin-bottom:10px;display:none}
 </style>
 </head>
 <body>
@@ -196,10 +203,46 @@ details{margin:0;padding:0}
   <button class="btn-sync" onclick="doLogout()">Abmelden</button>
 </div>
 
+<!-- ACCOUNT MODAL -->
+<div class="mo" id="accountMo">
+  <div class="md sm">
+    <div class="mhd"><h2>Mein Konto</h2><button class="bcl" onclick="closeAccount()">×</button></div>
+
+    <div class="acct-section">
+      <h3>Angemeldet als</h3>
+      <div class="acct-email" id="acctEmail">—</div>
+      <button class="btn-s" style="width:100%" onclick="doLogout();closeAccount()">Abmelden</button>
+    </div>
+
+    <div class="acct-section">
+      <h3>E-Mail ändern</h3>
+      <label>Neue E-Mail</label>
+      <input type="email" id="newEmail" placeholder="neue@email.at" style="margin-bottom:10px"/>
+      <div class="msg-ok" id="emailOk">✓ Bestätigungs-E-Mail gesendet!</div>
+      <div class="msg-err" id="emailErr"></div>
+      <button class="btn-p" onclick="changeEmail()">E-Mail ändern</button>
+    </div>
+
+    <div class="acct-section">
+      <h3>Passwort ändern</h3>
+      <label>Neues Passwort</label>
+      <input type="password" id="newPw1" placeholder="Neues Passwort" style="margin-bottom:10px"/>
+      <label>Passwort wiederholen</label>
+      <input type="password" id="newPw2" placeholder="Wiederholen" style="margin-bottom:10px"/>
+      <div class="msg-ok" id="pwOk">✓ Passwort erfolgreich geändert!</div>
+      <div class="msg-err" id="pwErr"></div>
+      <button class="btn-p" onclick="changePw()">Passwort ändern</button>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="htop">
     <h1>Fixkosten<span>buch</span></h1>
-    <button onclick="switchTab('settings')" id="btnSettings" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:4px 6px;border-radius:6px;color:var(--mut);transition:color .15s" title="Einstellungen">⚙️</button>
+    <div style="display:flex;gap:4px;align-items:center">
+      <button onclick="openAccount()" id="btnAccount" style="display:none;background:none;border:none;cursor:pointer;font-size:1.2rem;padding:4px 6px;border-radius:6px;color:var(--mut);transition:color .15s" title="Mein Konto">👤</button>
+      <button onclick="switchTab('settings')" id="btnSettings" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:4px 6px;border-radius:6px;color:var(--mut);transition:color .15s" title="Einstellungen">⚙️</button>
+    </div>
   </div>
   <div class="tabs">
     <div class="tab active" onclick="switchTab('months')">📅 Monate</div>
@@ -709,6 +752,7 @@ document.getElementById('phAmt').addEventListener('keydown',e=>{if(e.key==='Ente
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeEdit();closeConf();}});
 document.getElementById('editMo').addEventListener('click',e=>{if(e.target===document.getElementById('editMo'))closeEdit();});
 document.getElementById('confMo').addEventListener('click',e=>{if(e.target===document.getElementById('confMo'))closeConf();});
+document.getElementById('accountMo').addEventListener('click',e=>{if(e.target===document.getElementById('accountMo'))closeAccount();});
 
 
 // ── SUPABASE CONFIG ──
@@ -760,12 +804,50 @@ async function doLogout(){
   if(sb) await sb.auth.signOut();
   currentUser=null;
   document.getElementById('syncBar').style.display='none';
-  setSyncStatus('mut','Abgemeldet');
+  const btn=document.getElementById('btnAccount');
+  if(btn) btn.style.display='none';
 }
 
 function showSyncBar(){
   document.getElementById('syncBar').style.display='flex';
   setSyncStatus('green', currentUser?.email || 'Verbunden');
+  const btn=document.getElementById('btnAccount');
+  if(btn) btn.style.display='';
+}
+
+function openAccount(){
+  document.getElementById('acctEmail').textContent=currentUser?.email||'—';
+  document.getElementById('newEmail').value='';
+  document.getElementById('newPw1').value='';
+  document.getElementById('newPw2').value='';
+  ['emailOk','emailErr','pwOk','pwErr'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('accountMo').classList.add('open');
+}
+function closeAccount(){ document.getElementById('accountMo').classList.remove('open'); }
+
+async function changeEmail(){
+  const email=document.getElementById('newEmail').value.trim();
+  const errEl=document.getElementById('emailErr');
+  const okEl=document.getElementById('emailOk');
+  errEl.style.display='none'; okEl.style.display='none';
+  if(!email){ errEl.textContent='Bitte neue E-Mail eingeben.'; errEl.style.display='block'; return; }
+  const {error}=await sb.auth.updateUser({email});
+  if(error){ errEl.textContent=error.message; errEl.style.display='block'; }
+  else{ okEl.style.display='block'; document.getElementById('newEmail').value=''; }
+}
+
+async function changePw(){
+  const pw1=document.getElementById('newPw1').value;
+  const pw2=document.getElementById('newPw2').value;
+  const errEl=document.getElementById('pwErr');
+  const okEl=document.getElementById('pwOk');
+  errEl.style.display='none'; okEl.style.display='none';
+  if(!pw1){ errEl.textContent='Bitte neues Passwort eingeben.'; errEl.style.display='block'; return; }
+  if(pw1!==pw2){ errEl.textContent='Passwörter stimmen nicht überein.'; errEl.style.display='block'; return; }
+  if(pw1.length<6){ errEl.textContent='Mindestens 6 Zeichen.'; errEl.style.display='block'; return; }
+  const {error}=await sb.auth.updateUser({password:pw1});
+  if(error){ errEl.textContent=error.message; errEl.style.display='block'; }
+  else{ okEl.style.display='block'; document.getElementById('newPw1').value=''; document.getElementById('newPw2').value=''; }
 }
 
 function setSyncStatus(color, text){
