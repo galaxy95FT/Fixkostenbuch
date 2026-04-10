@@ -449,10 +449,12 @@ function addCategory(){
 }
 
 function deleteCat(id){
-  customCats=customCats.filter(c=>c.id!==id);
-  saveCats();
-  renderCatChips();
-  refreshCatSelects();
+  const c=customCats.find(x=>x.id===id); if(!c) return;
+  showConf(
+    `"${c.emoji} ${c.name}" löschen?`,
+    `Die Kategorie wird gelöscht. Bestehende Positionen behalten die Kategorie-ID.`,
+    ()=>{ customCats=customCats.filter(x=>x.id!==id); saveCats(); renderCatChips(); refreshCatSelects(); renderSettingsList(); }
+  );
 }
 
 function toggleSection(bodyId, arrowId){
@@ -539,7 +541,14 @@ function addAcct(){
   accts.push({id:Date.now(),name,color});saveA();renderAccts();
   document.getElementById('inNA').value='';
 }
-function delAcct(id){accts=accts.filter(a=>a.id!==id);saveA();renderAccts();}
+function delAcct(id){
+  const a=accts.find(x=>x.id===id); if(!a) return;
+  showConf(
+    `"${a.name}" löschen?`,
+    `Das Konto wird gelöscht. Positionen die diesem Konto zugewiesen sind, verlieren die Zuweisung.`,
+    ()=>{ accts=accts.filter(x=>x.id!==id); saveA(); renderAccts(); }
+  );
+}
 function renderAccts(){
   const chips=document.getElementById('acChips');
   if(chips) chips.innerHTML=accts.length===0
