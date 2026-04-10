@@ -16,7 +16,8 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0f0e0c;--sur:#1a1916;--sur2:#222118;--bor:#2e2d28;--acc:#d4a853;--acc2:#a87c3a;--txt:#e8e4d8;--mut:#7a7668;--red:#c0574a;--rad:10px}
-body{background:var(--bg);color:var(--txt);font-family:'DM Mono',monospace;min-height:100vh;padding-bottom:80px}
+body{background:var(--bg);color:var(--txt);font-family:'DM Mono',monospace;min-height:100vh;padding-bottom:80px;transition:background .3s,color .3s}
+body.light{--bg:#f5f4f0;--sur:#ffffff;--sur2:#f0ede6;--bor:#ddd9ce;--txt:#1a1916;--mut:#8a8578;}
 header{background:var(--sur);border-bottom:1px solid var(--bor);padding:18px 20px 0;position:sticky;top:0;z-index:20}
 .htop{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 h1{font-family:'DM Serif Display',serif;font-size:clamp(1.4rem,5vw,1.9rem);color:var(--acc);letter-spacing:-.02em}
@@ -270,7 +271,7 @@ details{margin:0;padding:0}
       <div class="full"><label>Bezeichnung</label><input type="text" id="inN" placeholder="z.B. Netflix, Miete, Strom…"/></div>
       <div><label>Betrag (€)</label><input type="number" id="inA" placeholder="0,00" step="0.01" min="0"/></div>
       <div><label>Intervall</label><select id="inI"><option value="monthly">Monatlich</option><option value="quarterly">Quartalsweise</option><option value="yearly">Jährlich</option><option value="weekly">Wöchentlich</option></select></div>
-      <div><label>Kategorie</label><select id="inC"><option value="Wohnen">🏠 Wohnen</option><option value="Mobilität">🚗 Mobilität</option><option value="Versicherung">🛡️ Versicherung</option><option value="Unterhaltung">🎬 Unterhaltung</option><option value="Kommunikation">📱 Kommunikation</option><option value="Gesundheit">💊 Gesundheit</option><option value="Sonstiges">📦 Sonstiges</option></select></div>
+      <div><label>Kategorie</label><select id="inC"></select></div>
       <div><label>Fälligkeit (Tag)</label><input type="number" id="inD" placeholder="1–31" min="1" max="31"/></div>
       <div><label>Gültig ab</label><input type="month" id="inF"/></div>
       <div class="full"><label>Konto / Bank</label><select id="inAc"><option value="">— kein Konto —</option></select></div>
@@ -282,22 +283,9 @@ details{margin:0;padding:0}
   <div id="clist"></div>
 </div>
 
+
 <div class="page" id="tab-settings">
-  <div class="acard page-top" style="padding:0">
-    <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'"
-      style="cursor:pointer;padding:13px 16px;display:flex;align-items:center;gap:6px;font-size:.68rem;color:var(--mut);text-transform:uppercase;letter-spacing:.1em;user-select:none">
-      <span id="acmArrow" style="font-size:.55rem;transition:transform .2s;display:inline-block">▶</span>
-      🏦 Konten verwalten
-    </div>
-    <div id="acmBody" style="display:none;padding:12px 16px;border-top:1px solid var(--bor)">
-      <div class="acchips" id="acChips"><span style="font-size:.75rem;color:var(--mut)">Noch keine Konten.</span></div>
-      <div class="acar">
-        <input type="text" id="inNA" placeholder="Kontoname (z.B. DKB Girokonto)"/>
-        <select id="inAcC"><option value="#5a8fbf">🔵 Blau</option><option value="#6a9e6a">🟢 Grün</option><option value="#d4a853">🟡 Gold</option><option value="#c0574a">🔴 Rot</option><option value="#9b72b0">🟣 Lila</option><option value="#6ab8b8">🩵 Türkis</option></select>
-        <button class="baa" onclick="addAcct()">+ Konto</button>
-      </div>
-    </div>
-  </div>
+  <div id="settingsList" style="margin-top:20px"></div>
 </div>
 
 <!-- EDIT MODAL -->
@@ -308,7 +296,7 @@ details{margin:0;padding:0}
       <div class="full"><label>Bezeichnung</label><input type="text" id="eN"/></div>
       <div><label>Betrag (€)</label><input type="number" id="eA" step="0.01" min="0"/></div>
       <div><label>Intervall</label><select id="eI"><option value="monthly">Monatlich</option><option value="quarterly">Quartalsweise</option><option value="yearly">Jährlich</option><option value="weekly">Wöchentlich</option></select></div>
-      <div><label>Kategorie</label><select id="eC"><option value="Wohnen">🏠 Wohnen</option><option value="Mobilität">🚗 Mobilität</option><option value="Versicherung">🛡️ Versicherung</option><option value="Unterhaltung">🎬 Unterhaltung</option><option value="Kommunikation">📱 Kommunikation</option><option value="Gesundheit">💊 Gesundheit</option><option value="Sonstiges">📦 Sonstiges</option></select></div>
+      <div><label>Kategorie</label><select id="eC"></select></div>
       <div><label>Fälligkeit</label><input type="number" id="eD" min="1" max="31"/></div>
       <div><label>Gültig ab</label><input type="month" id="eF"/></div>
       <div class="full"><label>Konto / Bank</label><select id="eAc"><option value="">— kein Konto —</option></select></div>
@@ -344,6 +332,134 @@ details{margin:0;padding:0}
 </div>
 
 <script>
+// ── EMOJI PICKER ──
+const EMOJI_CATS = {
+  '😀 Smileys': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😋','😛','😜','🤪','😝','🤑','🤗','🤔','😐','😑','😶','😏','😒','🙄','😬','😔','😪','😴','😷','🤒','🤕','🤢','🤧','🥵','🥶','😵','🤯','🤠','🥳','😎','🤓'],
+  '🏠 Orte':    ['🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏬','🏭','🏯','🏰','⛪','🕌','🛕','🕍','🕋','⛩️','🌅','🌄','🌇','🌆','🏙','🌃','🌉'],
+  '🚗 Mobilität':['🚗','🚕','🚙','🚌','🏎','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍','🛵','🚲','🛴','🚁','✈️','🛩','🚀','🛶','🚢','⛵','🚂','🚆','🚇','🚉','🚊'],
+  '🍕 Essen':   ['🍕','🍔','🌮','🌯','🥙','🥚','🍳','🥘','🍲','🥗','🍿','🥞','🥓','🥩','🍗','🍖','🌭','🍟','🧀','🥐','🥖','🍞','🧁','🍰','🎂','🍭','🍫','🍩','🍪','🍦','🍣','🍤','🍜','🍝','🍛','🍱','🥡','🍷','🍸','🍹','🍺','☕','🧃','🥤','🧋'],
+  '💪 Sport':   ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸','⛳','🎣','🥊','🥋','🎽','🛹','⛸','🎿','⛷','🏂','🏋️','🤸','🏌️','🧘','🏄','🏊','🚵','🚴','🏆','🥇','🥈','🥉','🏅'],
+  '💊 Gesundheit':['💊','💉','🩺','🩹','🏥','🧬','🔬','🩻','🩼','🦷','🦴','👁','🧠','🫀','🫁'],
+  '💰 Finanzen':['💰','💵','💴','💶','💷','💸','💳','🪙','💹','📈','📉','🏧','💲','🤑','🏦','📊','🧾','💼'],
+  '🎬 Freizeit':['🎬','🎮','🕹','🎲','🎯','🎳','🎨','🎭','🎤','🎧','🎼','🎹','🥁','🎷','🎺','🎸','🎻','📺','📻','📷','📱','💻','🎞','📚','📖','✏️','🖊'],
+  '🐶 Tiere':   ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺','🐴','🦄','🐝','🦋','🐢','🐍','🐬','🐳','🦈','🐊','🦒','🐘','🦛','🦏','🐪','🦘','🐕','🐈','🐓','🦜','🐇','🦔'],
+  '🌿 Natur':   ['🌱','🌲','🌳','🌴','🌵','🌾','☘️','🍀','🍁','🍂','🍃','🌺','🌻','🌹','🌷','🌸','💐','🍄','🌍','🌙','⭐','🌟','✨','☀️','⛅','☁️','🌧','⛈','❄️','☃️','🌬','🌈','☔','⚡','🔥','💧','🌊'],
+  '🏡 Haushalt':['🛋','🪑','🚿','🛁','🧴','🧹','🧺','🧻','🪣','🧼','🫧','🛏','🚪','💡','🔦','🕯','🧱','🔧','🔨','🛠','🔩','🪛','🧰','🗑','🛒','🧲','🪴','🖼'],
+};
+
+let emojiPickerOpen = false;
+let activeEmojiTab = Object.keys(EMOJI_CATS)[0];
+
+function toggleEmojiPicker(ev){
+  if(ev) ev.stopPropagation();
+  const picker = document.getElementById('emojiPicker');
+  emojiPickerOpen = !emojiPickerOpen;
+  picker.style.display = emojiPickerOpen ? 'block' : 'none';
+  if(emojiPickerOpen) renderEmojiPicker();
+}
+
+function renderEmojiPicker(){
+  const tabs = document.getElementById('emojiTabs');
+  const grid = document.getElementById('emojiGrid');
+  if(!tabs||!grid) return;
+  tabs.innerHTML = Object.keys(EMOJI_CATS).map(cat => {
+    const em = cat.split(' ')[0];
+    const active = cat === activeEmojiTab;
+    return `<button onclick="event.stopPropagation();setEmojiTab('${cat}')" style="background:${active?'var(--acc)':'var(--sur2)'};color:${active?'#000':'var(--mut)'};border:1px solid var(--bor);border-radius:6px;padding:4px 7px;cursor:pointer;font-size:.95rem;line-height:1">${em}</button>`;
+  }).join('');
+  const emojis = EMOJI_CATS[activeEmojiTab] || [];
+  grid.innerHTML = emojis.map(e =>
+    `<button onclick="event.stopPropagation();pickEmoji('${e}')" style="background:none;border:none;cursor:pointer;font-size:1.4rem;padding:3px;border-radius:4px;line-height:1" onmouseover="this.style.background='var(--sur2)'" onmouseout="this.style.background='none'">${e}</button>`
+  ).join('');
+}
+
+function setEmojiTab(cat){
+  activeEmojiTab = cat;
+  renderEmojiPicker();
+}
+
+function pickEmoji(e){
+  document.getElementById('inCatEmoji').value = e;
+  document.getElementById('emojiPicker').style.display = 'none';
+  emojiPickerOpen = false;
+  document.getElementById('inCatName').focus();
+}
+
+// Close emoji picker when clicking outside
+document.addEventListener('click', ev => {
+  if(!emojiPickerOpen) return;
+  const picker = document.getElementById('emojiPicker');
+  const field  = document.getElementById('inCatEmoji');
+  if(picker && !picker.contains(ev.target) && ev.target !== field){
+    picker.style.display = 'none';
+    emojiPickerOpen = false;
+  }
+});
+
+// ── CATEGORIES ──
+const DEFAULT_CATS = [
+  {id:'Wohnen',    emoji:'🏠', name:'Wohnen',        custom:false},
+  {id:'Mobilität', emoji:'🚗', name:'Mobilität',      custom:false},
+  {id:'Versicherung',emoji:'🛡️',name:'Versicherung',  custom:false},
+  {id:'Unterhaltung',emoji:'🎬',name:'Unterhaltung',  custom:false},
+  {id:'Kommunikation',emoji:'📱',name:'Kommunikation',custom:false},
+  {id:'Gesundheit',emoji:'💊', name:'Gesundheit',     custom:false},
+  {id:'Sonstiges', emoji:'📦', name:'Sonstiges',      custom:false},
+];
+
+let customCats = JSON.parse(localStorage.getItem('fk_cats') || '[]');
+const saveCats = () => localStorage.setItem('fk_cats', JSON.stringify(customCats));
+
+function allCats(){ return [...DEFAULT_CATS, ...customCats]; }
+
+function refreshCatSelects(currentVal=''){
+  ['inC','eC'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    const val=sel.value||currentVal;
+    sel.innerHTML=allCats().map(c=>`<option value="${c.id}">${c.emoji} ${c.name}</option>`).join('');
+    if(val) sel.value=val;
+  });
+}
+function renderCatChips(){
+  const el=document.getElementById('catChips'); if(!el) return;
+  const all=allCats();
+  el.innerHTML=all.map(c=>`
+    <div class="acchip" style="margin-bottom:6px">
+      <span style="font-size:1rem">${c.emoji}</span>
+      <span>${c.name}</span>
+      ${c.custom?`<button class="cdel" onclick="deleteCat('${c.id}')">×</button>`:'<span style="font-size:.6rem;color:var(--mut);margin-left:4px">·</span>'}
+    </div>`).join('');
+}
+
+function addCategory(){
+  const emoji=document.getElementById('inCatEmoji').value.trim()||'📌';
+  const name=document.getElementById('inCatName').value.trim();
+  if(!name) return;
+  const id='cat_'+Date.now();
+  customCats.push({id, emoji, name, custom:true});
+  saveCats();
+  document.getElementById('inCatEmoji').value='';
+  document.getElementById('inCatName').value='';
+  renderCatChips();
+  refreshCatSelects();
+}
+
+function deleteCat(id){
+  customCats=customCats.filter(c=>c.id!==id);
+  saveCats();
+  renderCatChips();
+  refreshCatSelects();
+}
+
+function toggleSection(bodyId, arrowId){
+  const body=document.getElementById(bodyId);
+  const arrow=document.getElementById(arrowId);
+  const open=body.style.display==='block';
+  body.style.display=open?'none':'block';
+  if(arrow) arrow.style.transform=open?'':'rotate(90deg)';
+  if(!open && bodyId==='catBody') renderCatChips();
+}
+
 const COLORS=['#d4a853','#c0574a','#6a9e6a','#5a8fbf','#9b72b0','#d4856a','#6ab8b8','#b0a96a'];
 const MO=['Jänner','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 const IL={monthly:'monatlich',quarterly:'quartalsweise',yearly:'jährlich',weekly:'wöchentlich'};
@@ -364,7 +480,12 @@ let editPH=[];
 const saveC=()=>localStorage.setItem('fk_costs',JSON.stringify(costs));
 const saveA=()=>localStorage.setItem('fk_accts',JSON.stringify(accts));
 const saveV=()=>localStorage.setItem('fk_var',  JSON.stringify(varE));
-const fmt=n=>n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+// ── SETTINGS STATE ──
+let currency   = localStorage.getItem('fk_currency')   || '€';
+let startMonth = localStorage.getItem('fk_startMonth') || '';
+let darkMode   = localStorage.getItem('fk_dark') !== 'false'; // default dark
+
+const fmt = n => n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+currency;
 const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const fmtMo=ym=>{const[y,m]=ym.split('-');return MO[+m-1]+' '+y;};
 function toMo(a,iv){if(iv==='weekly')return a*52/12;if(iv==='quarterly')return a/3;if(iv==='yearly')return a/12;return a;}
@@ -403,6 +524,7 @@ function switchTab(n){
   if(gear) gear.style.color=n==='settings'?'var(--acc)':'var(--mut)';
   if(n==='months')renderMonths();
   if(n==='costs')renderCosts();
+  if(n==='settings'){renderSettingsList();}
 }
 
 // ACCOUNTS
@@ -415,10 +537,16 @@ function addAcct(){
 }
 function delAcct(id){accts=accts.filter(a=>a.id!==id);saveA();renderAccts();}
 function renderAccts(){
-  document.getElementById('acChips').innerHTML=accts.length===0
+  const chips=document.getElementById('acChips');
+  if(chips) chips.innerHTML=accts.length===0
     ?'<span style="font-size:.75rem;color:var(--mut)">Noch keine Konten.</span>'
     :accts.map(a=>`<div class="acchip"><div class="cdot" style="background:${a.color}"></div><span>${esc(a.name)}</span><button class="cdel" onclick="delAcct(${a.id})">×</button></div>`).join('');
-  ['inAc','eAc'].forEach(id=>{const s=document.getElementById(id),v=s.value;s.innerHTML='<option value="">— kein Konto —</option>'+accts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');s.value=v;});
+  ['inAc','eAc'].forEach(id=>{
+    const s=document.getElementById(id); if(!s) return;
+    const v=s.value;
+    s.innerHTML='<option value="">— kein Konto —</option>'+accts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');
+    s.value=v;
+  });
 }
 
 // ADD COST
@@ -482,11 +610,12 @@ function openEdit(id){
   document.getElementById('eN').value=c.name;
   document.getElementById('eA').value=c.variable?'':c.amount;
   document.getElementById('eI').value=c.interval;
+  refreshCatSelects(c.category);
   document.getElementById('eC').value=c.category;
   document.getElementById('eD').value=c.dueDay||'';
   document.getElementById('eF').value=c.startMonth||'';
   document.getElementById('eV').checked=!!c.variable;
-  ['inAc','eAc'].forEach(id=>{const s=document.getElementById(id),v=s.value;s.innerHTML='<option value="">— kein Konto —</option>'+accts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');s.value=v;});
+  ['inAc','eAc'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const v=s.value;s.innerHTML='<option value="">— kein Konto —</option>'+accts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');s.value=v;});
   document.getElementById('eAc').value=c.accountId||'';
   document.getElementById('phFrom').value='';
   document.getElementById('phAmt').value='';
@@ -541,11 +670,11 @@ function updateHdr(){
   const fix=costs.filter(c=>!c.variable).reduce((s,c)=>s+toMo(effectiveAmount(c,mk),c.interval),0);
   const el=document.getElementById('hBadge');
   if(el) el.textContent=fmt(fix)+'/Mo';
-  document.getElementById('sFix').textContent=fmt(fix);
-  document.getElementById('sCnt').textContent=costs.length;
+  const sFix=document.getElementById('sFix'); if(sFix) sFix.textContent=fmt(fix);
+  const sCnt=document.getElementById('sCnt'); if(sCnt) sCnt.textContent=costs.length;
   let tots=[];
   for(let i=0;i<6;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const t=mTotal(d.getFullYear(),d.getMonth());if(t>0)tots.push(t);}
-  document.getElementById('sAvg').textContent=fmt(tots.length?tots.reduce((a,b)=>a+b,0)/tots.length:fix);
+  const sAvg=document.getElementById('sAvg'); if(sAvg) sAvg.textContent=fmt(tots.length?tots.reduce((a,b)=>a+b,0)/tots.length:fix);
 }
 
 // LONG PRESS
@@ -633,6 +762,8 @@ function renderMonths(){
     const varT=varC.reduce((s,c)=>{const ve=getVE(c.id,y,m);return s+(ve?ve.amount:0);},0);
     const total=fixT+varT;
     if(total===0)continue;
+    // skip months before user-defined startMonth
+    if(startMonth && mk < startMonth) continue;
     // Separator appears between years — shows total of the year BELOW (older year)
     if(lastYear!==null && y!==lastYear){
       const yt=yearTotals[y]||0;
@@ -748,15 +879,20 @@ function renderCosts(){
   c.innerHTML=h;
 }
 
-// EVENTS
-['inN','inA'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')addCost();}));
-['eN','eA'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')saveEdit();}));
-document.getElementById('inNA').addEventListener('keydown',e=>{if(e.key==='Enter')addAcct();});
-document.getElementById('phAmt').addEventListener('keydown',e=>{if(e.key==='Enter')addPriceEntry();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeEdit();closeConf();}});
-document.getElementById('editMo').addEventListener('click',e=>{if(e.target===document.getElementById('editMo'))closeEdit();});
-document.getElementById('confMo').addEventListener('click',e=>{if(e.target===document.getElementById('confMo'))closeConf();});
-document.getElementById('accountMo').addEventListener('click',e=>{if(e.target===document.getElementById('accountMo'))closeAccount();});
+// EVENTS — alle mit ?. gesichert
+['inN','inA'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')addCost();}));
+['eN','eA'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')saveEdit();}));
+document.getElementById('phAmt')?.addEventListener('keydown',e=>{if(e.key==='Enter')addPriceEntry();});
+document.getElementById('editMo')?.addEventListener('click',e=>{if(e.target===document.getElementById('editMo'))closeEdit();});
+document.getElementById('confMo')?.addEventListener('click',e=>{if(e.target===document.getElementById('confMo'))closeConf();});
+document.getElementById('accountMo')?.addEventListener('click',e=>{if(e.target===document.getElementById('accountMo'))closeAccount();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeEdit();closeConf();}
+  if(e.key==='Enter'){
+    if(e.target.id==='inNA')      addAcct();
+    if(e.target.id==='inCatName') addCategory();
+  }
+});
 
 
 // ── SUPABASE CONFIG ──
@@ -899,8 +1035,223 @@ const _saveC=saveC, _saveA=saveA, _saveV=saveV;
 let syncTimer=null;
 function scheduleSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(syncNow, 2000); }
 
+// ── CURRENCY ──
+function setCurrency(val){
+  currency=val;
+  localStorage.setItem('fk_currency',val);
+  renderMonths(); renderCosts(); updateHdr();
+}
+
+// ── START MONTH ──
+function setStartMonth(val){
+  startMonth=val;
+  localStorage.setItem('fk_startMonth',val);
+  firstRender=true;
+  renderMonths();
+}
+
+// ── DARK MODE ──
+function applyDarkMode(){
+  document.body.classList.toggle('light', !darkMode);
+  const thumb=document.getElementById('darkThumb');
+  const toggle=document.getElementById('darkToggle');
+  if(thumb) thumb.style.transform = darkMode ? '' : 'translateX(20px)';
+  if(toggle) toggle.style.background = darkMode ? 'var(--acc)' : 'var(--bor)';
+}
+function toggleDarkMode(){
+  darkMode=!darkMode;
+  localStorage.setItem('fk_dark', darkMode);
+  applyDarkMode();
+}
+
+// ── CSV EXPORT ──
+function exportCSV(){
+  const now=new Date();
+  const mk=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  let csv='Name,Kategorie,Betrag,Währung,Intervall,Variabel,Fälligkeit,Gültig ab,Konto\n';
+  costs.forEach(c=>{
+    const ac=accts.find(a=>a.id===c.accountId);
+    const ea=c.variable?'variabel':effectiveAmount(c,mk).toFixed(2);
+    csv+=`"${c.name}","${c.category}","${ea}","${currency}","${IL[c.interval]}","${c.variable?'Ja':'Nein'}","${c.dueDay||''}","${c.startMonth||''}","${ac?ac.name:''}"\n`;
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='fixkostenbuch.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function initSettingsUI(){
+  const sc=document.getElementById('selCurrency');
+  if(sc) sc.value=currency;
+  const sm=document.getElementById('selStartMonth');
+  if(sm) sm.value=startMonth;
+  applyDarkMode();
+}
+
+// ── SETTINGS DRAG & DROP ──
+const SETTINGS_SECTIONS = {
+  accounts: {
+    icon:'🏦', title:'Konten verwalten',
+    render: () => `
+      <div class="acchips" id="acChips"><span style="font-size:.75rem;color:var(--mut)">Noch keine Konten.</span></div>
+      <div class="acar" style="margin-top:10px">
+        <input type="text" id="inNA" placeholder="Kontoname (z.B. DKB Girokonto)"/>
+        <select id="inAcC"><option value="#5a8fbf">🔵 Blau</option><option value="#6a9e6a">🟢 Grün</option><option value="#d4a853">🟡 Gold</option><option value="#c0574a">🔴 Rot</option><option value="#9b72b0">🟣 Lila</option><option value="#6ab8b8">🩵 Türkis</option></select>
+        <button class="baa" onclick="addAcct()">+ Konto</button>
+      </div>`
+  },
+  categories: {
+    icon:'🏷️', title:'Kategorien verwalten',
+    render: () => `
+      <div style="font-size:.72rem;color:var(--mut);margin-bottom:10px">Standard-Kategorien + deine eigenen:</div>
+      <div id="catChips"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:flex-end">
+        <div style="position:relative">
+          <label>Emoji</label>
+          <input type="text" id="inCatEmoji" placeholder="📌" readonly onclick="toggleEmojiPicker(event)" style="width:52px;text-align:center;font-size:1.3rem;padding:6px 4px;cursor:pointer"/>
+          <div id="emojiPicker" style="display:none;position:absolute;top:100%;left:0;z-index:50;background:var(--sur);border:1px solid var(--bor);border-radius:10px;padding:10px;width:260px;box-shadow:0 8px 24px rgba(0,0,0,.4)">
+            <div id="emojiTabs" style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap"></div>
+            <div id="emojiGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-height:180px;overflow-y:auto"></div>
+          </div>
+        </div>
+        <div style="flex:1"><label>Name</label><input type="text" id="inCatName" placeholder="Kategoriename"/></div>
+        <button class="baa" onclick="addCategory()" style="padding:8px 14px;align-self:flex-end">+</button>
+      </div>`
+  },
+  general: {
+    icon:'⚙️', title:'Allgemein',
+    render: () => `
+      <div style="margin-bottom:18px">
+        <label>💱 Währung</label>
+        <select id="selCurrency" onchange="setCurrency(this.value)" style="margin-top:4px">
+          <option value="€">€ Euro</option><option value="$">$ Dollar</option>
+          <option value="CHF">CHF Franken</option><option value="£">£ Pfund</option><option value="¥">¥ Yen</option>
+        </select>
+      </div>
+      <div style="margin-bottom:18px">
+        <label>📅 Monate anzeigen ab</label>
+        <input type="month" id="selStartMonth" onchange="setStartMonth(this.value)" style="margin-top:4px"/>
+        <div style="font-size:.7rem;color:var(--mut);margin-top:4px">Ältere Monate werden ausgeblendet</div>
+      </div>
+      <div style="margin-bottom:18px;display:flex;align-items:center;justify-content:space-between">
+        <label style="margin:0;font-size:.78rem;text-transform:none;letter-spacing:0;color:var(--txt)">🌙 Dunkler Modus</label>
+        <div onclick="toggleDarkMode()" id="darkToggle" style="width:44px;height:24px;border-radius:12px;cursor:pointer;position:relative;transition:background .2s">
+          <div id="darkThumb" style="width:18px;height:18px;border-radius:50%;background:#000;position:absolute;top:3px;left:3px;transition:transform .2s"></div>
+        </div>
+      </div>
+      <div>
+        <label>📤 Daten exportieren</label>
+        <button class="btn-s" onclick="exportCSV()" style="width:100%;margin-top:8px;text-align:left;padding:10px 14px">↓ Als CSV herunterladen</button>
+      </div>`
+  }
+};
+
+let settingsOrder = JSON.parse(localStorage.getItem('fk_settings_order') || '["accounts","categories","general"]');
+let settingsOpen  = JSON.parse(localStorage.getItem('fk_settings_open')  || '{}');
+let dragSrcKey = null;
+
+function renderSettingsList(){
+  const container = document.getElementById('settingsList');
+  if(!container) return;
+  container.innerHTML = settingsOrder.map((key,i) => {
+    const sec = SETTINGS_SECTIONS[key];
+    const open = !!settingsOpen[key];
+    return `<div class="acard set-section" data-key="${key}" draggable="true"
+        style="padding:0;margin-bottom:10px;transition:opacity .2s,transform .2s"
+        ondragstart="onDragStart(event,'${key}')"
+        ondragover="onDragOver(event)"
+        ondrop="onDrop(event,'${key}')"
+        ondragend="onDragEnd(event)">
+      <div style="cursor:pointer;padding:13px 16px;display:flex;align-items:center;gap:8px;font-size:.68rem;color:var(--mut);text-transform:uppercase;letter-spacing:.1em;user-select:none"
+        onclick="toggleSetSection('${key}')">
+        <span style="color:var(--bor);font-size:1rem;cursor:grab;touch-action:none" title="Verschieben">⠿</span>
+        <span>${sec.icon} ${sec.title}</span>
+        <span style="margin-left:auto;font-size:.55rem;transition:transform .2s;display:inline-block;transform:${open?'rotate(90deg)':''}">▶</span>
+      </div>
+      <div style="display:${open?'block':'none'};padding:12px 16px;border-top:1px solid var(--bor)">
+        ${sec.render()}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Re-init dynamic parts after render
+  renderAccts();
+  renderCatChips();
+  initSettingsUI();
+
+  // Touch drag for mobile
+  container.querySelectorAll('.set-section').forEach(el => {
+    let touchStartY=0, touchKey='';
+    el.addEventListener('touchstart', e => {
+      if(!e.target.closest('[title="Verschieben"]')) return;
+      touchKey = el.dataset.key;
+      touchStartY = e.touches[0].clientY;
+      el.style.opacity = '0.6';
+    }, {passive:true});
+    el.addEventListener('touchmove', e => {
+      if(!touchKey) return;
+      e.preventDefault();
+      const ty = e.touches[0].clientY;
+      const all = [...container.querySelectorAll('.set-section')];
+      const target = all.find(s => {
+        const r = s.getBoundingClientRect();
+        return ty >= r.top && ty <= r.bottom && s.dataset.key !== touchKey;
+      });
+      if(target){
+        const srcIdx = settingsOrder.indexOf(touchKey);
+        const tgtIdx = settingsOrder.indexOf(target.dataset.key);
+        settingsOrder.splice(srcIdx,1);
+        settingsOrder.splice(tgtIdx,0,touchKey);
+        localStorage.setItem('fk_settings_order', JSON.stringify(settingsOrder));
+        renderSettingsList();
+        touchKey='';
+      }
+    }, {passive:false});
+    el.addEventListener('touchend', () => {
+      el.style.opacity=''; touchKey='';
+    });
+  });
+}
+
+function toggleSetSection(key){
+  settingsOpen[key] = !settingsOpen[key];
+  localStorage.setItem('fk_settings_open', JSON.stringify(settingsOpen));
+  renderSettingsList();
+}
+
+function onDragStart(e, key){
+  dragSrcKey = key;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.style.opacity = '0.4';
+}
+function onDragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.style.transform = 'scale(1.01)';
+}
+function onDrop(e, targetKey){
+  e.preventDefault();
+  if(dragSrcKey === targetKey) return;
+  const si = settingsOrder.indexOf(dragSrcKey);
+  const ti = settingsOrder.indexOf(targetKey);
+  settingsOrder.splice(si,1);
+  settingsOrder.splice(ti,0,dragSrcKey);
+  localStorage.setItem('fk_settings_order', JSON.stringify(settingsOrder));
+  renderSettingsList();
+}
+function onDragEnd(e){
+  e.currentTarget.style.opacity='';
+  e.currentTarget.style.transform='';
+  dragSrcKey=null;
+  document.querySelectorAll('.set-section').forEach(s=>s.style.transform='');
+}
+
 // INIT
-renderAccts();renderMonths();renderCosts();updateHdr();
+renderAccts();
+refreshCatSelects();
+renderMonths();renderCosts();updateHdr();
+applyDarkMode();
 
 // PWA Service Worker
 if('serviceWorker' in navigator){
