@@ -213,7 +213,7 @@ details{margin:0;padding:0}
 <div class="sync-bar" id="syncBar" style="display:none">
   <div class="sync-dot" id="syncDot"></div>
   <span class="sync-status" id="syncStatus">Nicht verbunden</span>
-  <button class="btn-sync" onclick="syncNow()">↕ Sync</button>
+  <button class="btn-sync" onclick="loadFromSupabase()">↕ Sync</button>
   <button class="btn-sync" onclick="doLogout()">Abmelden</button>
 </div>
 
@@ -1111,23 +1111,19 @@ async function loadFromSupabase(){
   try {
     const {data} = await sb.from('fk_data').select('*').eq('user_id',currentUser.id).single();
     if(!data){ setSyncStatus('green','Verbunden'); return; }
-    const remoteTime = new Date(data.updated_at||0).getTime();
-    const localTime  = new Date(localStorage.getItem(lsKey('fk_synced_at'))||0).getTime();
-    if(remoteTime > localTime){
-      costs      = JSON.parse(data.costs||'[]');
-      accts      = JSON.parse(data.accts||'[]');
-      varE       = JSON.parse(data.var_entries||'[]');
-      customCats = JSON.parse(data.custom_cats||'[]');
-      localStorage.setItem(lsKey('fk_costs'),      JSON.stringify(costs));
-      localStorage.setItem(lsKey('fk_accts'),      JSON.stringify(accts));
-      localStorage.setItem(lsKey('fk_var'),        JSON.stringify(varE));
-      localStorage.setItem(lsKey('fk_cats'),       JSON.stringify(customCats));
-      localStorage.setItem(lsKey('fk_synced_at'),  data.updated_at);
-      renderAccts(); refreshCatSelects(); renderMonths(); renderCosts(); updateHdr();
-      setSyncStatus('green','Aktualisiert · '+new Date().toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'}));
-    } else {
-      await syncNow();
-    }
+
+    // Always load remote data into local
+    costs      = JSON.parse(data.costs||'[]');
+    accts      = JSON.parse(data.accts||'[]');
+    varE       = JSON.parse(data.var_entries||'[]');
+    customCats = JSON.parse(data.custom_cats||'[]');
+    localStorage.setItem(lsKey('fk_costs'),     JSON.stringify(costs));
+    localStorage.setItem(lsKey('fk_accts'),     JSON.stringify(accts));
+    localStorage.setItem(lsKey('fk_var'),       JSON.stringify(varE));
+    localStorage.setItem(lsKey('fk_cats'),      JSON.stringify(customCats));
+    localStorage.setItem(lsKey('fk_synced_at'), data.updated_at||new Date().toISOString());
+    renderAccts(); refreshCatSelects(); renderMonths(); renderCosts(); updateHdr();
+    setSyncStatus('green','Aktualisiert · '+new Date().toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'}));
   } catch(e){ setSyncStatus('mut','Sync fehlgeschlagen'); }
 }
 
