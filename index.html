@@ -424,7 +424,7 @@ function uid(){ return currentUser?.id || 'local'; }
 function lsKey(k){ return `${k}_${uid()}`; }
 
 let customCats = JSON.parse(localStorage.getItem(lsKey('fk_cats')) || '[]');
-const saveCats = () => localStorage.setItem(lsKey('fk_cats'), JSON.stringify(customCats));
+const saveCats = () => { localStorage.setItem(lsKey('fk_cats'), JSON.stringify(customCats)); scheduleSync(); };
 
 function allCats(){ return [...DEFAULT_CATS, ...customCats]; }
 function catLabel(id){
@@ -1097,6 +1097,7 @@ async function syncNow(){
       costs: JSON.stringify(costs),
       accts: JSON.stringify(accts),
       var_entries: JSON.stringify(varE),
+      custom_cats: JSON.stringify(customCats),
       updated_at: now
     }, {onConflict:'user_id'});
     localStorage.setItem(lsKey('fk_synced_at'), now);
@@ -1110,24 +1111,21 @@ async function loadFromSupabase(){
   try {
     const {data} = await sb.from('fk_data').select('*').eq('user_id',currentUser.id).single();
     if(!data){ setSyncStatus('green','Verbunden'); return; }
-
     const remoteTime = new Date(data.updated_at||0).getTime();
     const localTime  = new Date(localStorage.getItem(lsKey('fk_synced_at'))||0).getTime();
-
     if(remoteTime > localTime){
-      // Remote is newer — load from Supabase
-      costs = JSON.parse(data.costs||'[]');
-      accts = JSON.parse(data.accts||'[]');
-      varE  = JSON.parse(data.var_entries||'[]');
-      // Save to localStorage WITHOUT triggering scheduleSync
-      localStorage.setItem(lsKey('fk_costs'), JSON.stringify(costs));
-      localStorage.setItem(lsKey('fk_accts'), JSON.stringify(accts));
-      localStorage.setItem(lsKey('fk_var'),   JSON.stringify(varE));
-      localStorage.setItem(lsKey('fk_synced_at'), data.updated_at);
+      costs      = JSON.parse(data.costs||'[]');
+      accts      = JSON.parse(data.accts||'[]');
+      varE       = JSON.parse(data.var_entries||'[]');
+      customCats = JSON.parse(data.custom_cats||'[]');
+      localStorage.setItem(lsKey('fk_costs'),      JSON.stringify(costs));
+      localStorage.setItem(lsKey('fk_accts'),      JSON.stringify(accts));
+      localStorage.setItem(lsKey('fk_var'),        JSON.stringify(varE));
+      localStorage.setItem(lsKey('fk_cats'),       JSON.stringify(customCats));
+      localStorage.setItem(lsKey('fk_synced_at'),  data.updated_at);
       renderAccts(); refreshCatSelects(); renderMonths(); renderCosts(); updateHdr();
       setSyncStatus('green','Aktualisiert · '+new Date().toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'}));
     } else {
-      // Local is newer — push to Supabase
       await syncNow();
     }
   } catch(e){ setSyncStatus('mut','Sync fehlgeschlagen'); }
