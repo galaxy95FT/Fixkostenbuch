@@ -499,8 +499,6 @@ let firstRender=true;
 // temp price history being edited
 let editPH=[];
 
-let syncTimer=null;
-function scheduleSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(syncNow, 3000); }
 const saveC=()=>{ localStorage.setItem(lsKey('fk_costs'),JSON.stringify(costs)); scheduleSync(); };
 const saveA=()=>{ localStorage.setItem(lsKey('fk_accts'),JSON.stringify(accts)); scheduleSync(); };
 const saveV=()=>{ localStorage.setItem(lsKey('fk_var'),  JSON.stringify(varE));  scheduleSync(); };
@@ -1093,39 +1091,55 @@ async function syncNow(){
   if(!sb||!currentUser){ setSyncStatus('mut','Nicht verbunden'); return; }
   setSyncStatus('yellow','Synchronisiere…');
   try {
-    // UPSERT local data to Supabase
-    const uid = currentUser.id;
+    const now = new Date().toISOString();
     await sb.from('fk_data').upsert({
-      user_id: uid,
+      user_id: currentUser.id,
       costs: JSON.stringify(costs),
       accts: JSON.stringify(accts),
       var_entries: JSON.stringify(varE),
-      updated_at: new Date().toISOString()
+      updated_at: now
     }, {onConflict:'user_id'});
+    localStorage.setItem(lsKey('fk_synced_at'), now);
     setSyncStatus('green','Gespeichert · '+new Date().toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'}));
   } catch(e){ setSyncStatus('mut','Sync fehlgeschlagen'); }
 }
 
 async function loadFromSupabase(){
   if(!sb||!currentUser) return;
-  setSyncStatus('yellow','Synchronisiere…');
-  const {data} = await sb.from('fk_data').select('*').eq('user_id',currentUser.id).single();
-  if(!data){ setSyncStatus('green','Verbunden'); return; }
+  setSyncStatus('yellow','Laden…');
   try {
-    // Always use remote data — it's the source of truth
-    const remoteCosts = JSON.parse(data.costs||'[]');
-    const remoteAccts = JSON.parse(data.accts||'[]');
-    const remoteVarE  = JSON.parse(data.var_entries||'[]');
-    costs = remoteCosts; saveC();
-    accts = remoteAccts; saveA();
-    varE  = remoteVarE;  saveV();
-    setSyncStatus('green','Synchronisiert · '+new Date().toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'}));
-    reloadUserData();
+    const {data} = await sb.from('fk_data').select('*').eq('user_id',currentUser.id).single();
+    if(!data){ setSyncStatus('green','Verbunden'); return; }
+
+    const remoteTime = new Date(data.updated_at||0).getTime();
+    const localTime  = new Date(localStorage.getItem(lsKey('fk_synced_at'))||0).getTime();
+
+    if(remoteTime > localTime){
+      // Remote is newer — load from Supabase
+      costs = JSON.parse(data.costs||'[]');
+      accts = JSON.parse(data.accts||'[]');
+      varE  = JSON.parse(data.var_entries||'[]');
+      // Save to localStorage WITHOUT triggering scheduleSync
+      localStorage.setItem(lsKey('fk_costs'), JSON.stringify(costs));
+      localStorage.setItem(lsKey('fk_accts'), JSON.stringify(accts));
+      localStorage.setItem(lsKey('fk_var'),   JSON.stringify(varE));
+      localStorage.setItem(lsKey('fk_synced_at'), data.updated_at);
+      renderAccts(); refreshCatSelects(); renderMonths(); renderCosts(); updateHdr();
+      setSyncStatus('green','Aktualisiert · '+new Date().toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'}));
+    } else {
+      // Local is newer — push to Supabase
+      await syncNow();
+    }
   } catch(e){ setSyncStatus('mut','Sync fehlgeschlagen'); }
 }
 
 // Auto-sync after every change (debounced 3 seconds)
-const _saveC=saveC, _saveA=saveA, _saveV=saveV;
+// Uses direct localStorage write to avoid infinite loop
+let syncTimer=null;
+function scheduleSync(){
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>{ if(sb&&currentUser) syncNow(); }, 3000);
+}
 
 // ── CURRENCY ──
 function setCurrency(val){
