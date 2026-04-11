@@ -499,9 +499,11 @@ let firstRender=true;
 // temp price history being edited
 let editPH=[];
 
-const saveC=()=>localStorage.setItem(lsKey('fk_costs'),JSON.stringify(costs));
-const saveA=()=>localStorage.setItem(lsKey('fk_accts'),JSON.stringify(accts));
-const saveV=()=>localStorage.setItem(lsKey('fk_var'),  JSON.stringify(varE));
+let syncTimer=null;
+function scheduleSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(syncNow, 3000); }
+const saveC=()=>{ localStorage.setItem(lsKey('fk_costs'),JSON.stringify(costs)); scheduleSync(); };
+const saveA=()=>{ localStorage.setItem(lsKey('fk_accts'),JSON.stringify(accts)); scheduleSync(); };
+const saveV=()=>{ localStorage.setItem(lsKey('fk_var'),  JSON.stringify(varE));  scheduleSync(); };
 // ── SETTINGS STATE ──
 let currency   = localStorage.getItem(lsKey('fk_currency'))   || '€';
 let startMonth = localStorage.getItem(lsKey('fk_startMonth')) || '';
@@ -1106,24 +1108,24 @@ async function syncNow(){
 
 async function loadFromSupabase(){
   if(!sb||!currentUser) return;
+  setSyncStatus('yellow','Synchronisiere…');
   const {data} = await sb.from('fk_data').select('*').eq('user_id',currentUser.id).single();
-  if(!data) return;
+  if(!data){ setSyncStatus('green','Verbunden'); return; }
   try {
+    // Always use remote data — it's the source of truth
     const remoteCosts = JSON.parse(data.costs||'[]');
     const remoteAccts = JSON.parse(data.accts||'[]');
     const remoteVarE  = JSON.parse(data.var_entries||'[]');
-    // Use remote if newer or local is empty
-    if(remoteCosts.length >= costs.length){ costs=remoteCosts; saveC(); }
-    if(remoteAccts.length >= accts.length){ accts=remoteAccts; saveA(); }
-    if(remoteVarE.length  >= varE.length) { varE=remoteVarE;   saveV(); }
+    costs = remoteCosts; saveC();
+    accts = remoteAccts; saveA();
+    varE  = remoteVarE;  saveV();
+    setSyncStatus('green','Synchronisiert · '+new Date().toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'}));
     reloadUserData();
-  } catch(e){}
+  } catch(e){ setSyncStatus('mut','Sync fehlgeschlagen'); }
 }
 
-// Override save functions to auto-sync
+// Auto-sync after every change (debounced 3 seconds)
 const _saveC=saveC, _saveA=saveA, _saveV=saveV;
-let syncTimer=null;
-function scheduleSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(syncNow, 2000); }
 
 // ── CURRENCY ──
 function setCurrency(val){
@@ -1381,26 +1383,36 @@ window.addEventListener('load', function(){
   const type = params.get('type');
 
   if(accessToken && (type === 'invite' || type === 'recovery' || type === 'signup')){
-    // Clear any existing session so invited user gets their own account
     sb.auth.signOut().then(()=>{
-      // Set the session from the invite token
       sb.auth.setSession({access_token: accessToken, refresh_token: params.get('refresh_token')||''})
         .then(res=>{
           if(res.data?.user){
             currentUser = res.data.user;
-            // Show password setup for new invite
-            if(type === 'invite'){
+            const isReset = type === 'recovery';
+            const isInvite = type === 'invite';
+            if(isInvite || isReset){
               document.getElementById('loginOverlay').style.display='flex';
               setLoginTab('login', document.querySelectorAll('.login-tab')[0]);
-              document.querySelector('.login-box p').textContent = 'Willkommen! Bitte lege ein Passwort für deinen Account fest.';
+              // Hide tabs and forgot button
+              document.querySelector('.login-tabs').style.display='none';
+              document.getElementById('forgotBtn').style.display='none';
+              document.querySelector('.login-box p').textContent = isReset
+                ? 'Bitte gib dein neues Passwort ein.'
+                : 'Willkommen! Bitte lege ein Passwort für deinen Account fest.';
               document.getElementById('loginEmail').value = currentUser.email;
               document.getElementById('loginEmail').readOnly = true;
-              document.getElementById('loginBtn').textContent = 'Passwort festlegen';
+              document.getElementById('loginPw').value = '';
+              document.getElementById('loginPw').focus();
+              document.getElementById('loginBtn').textContent = isReset ? 'Passwort speichern' : 'Passwort festlegen';
               document.getElementById('loginBtn').onclick = async ()=>{
                 const pw = document.getElementById('loginPw').value;
-                if(!pw || pw.length < 6){ const e=document.getElementById('loginErr'); e.textContent='Mindestens 6 Zeichen.'; e.style.display='block'; return; }
+                const errEl = document.getElementById('loginErr');
+                if(!pw || pw.length < 6){ errEl.textContent='Mindestens 6 Zeichen.'; errEl.style.display='block'; return; }
                 const {error} = await sb.auth.updateUser({password: pw});
-                if(error){ const e=document.getElementById('loginErr'); e.textContent=error.message; e.style.display='block'; return; }
+                if(error){ errEl.textContent=friendlyAuthError(error.message); errEl.style.display='block'; return; }
+                // Reset UI
+                document.querySelector('.login-tabs').style.display='';
+                document.getElementById('loginEmail').readOnly = false;
                 document.getElementById('loginOverlay').style.display='none';
                 showSyncBar();
                 reloadUserData();
